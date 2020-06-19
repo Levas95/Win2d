@@ -17,19 +17,28 @@ Licensed under the MIT License. See LICENSE.txt in the project root for license 
     Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
 
     <Grid>
-        <ScrollViewer HorizontalScrollMode="Enabled"
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="50"/>
+        </Grid.RowDefinitions>
+        <ScrollViewer Grid.Row="0"
+                      HorizontalScrollMode="Enabled"
                       HorizontalScrollBarVisibility="Visible"
                       VerticalScrollMode="Enabled"
                       VerticalScrollBarVisibility="Visible"
                       IsZoomChainingEnabled="True"
                       ZoomMode="Enabled"
-                      MinZoomFactor="1"
-                      MaxZoomFactor="10"
+                      MinZoomFactor="0.5"       
+                      MaxZoomFactor="1.5"
                       >
-            <canvas:CanvasVirtualControl x:Name="canvasControl" RegionsInvalidated="canvasControl_RegionsInvalidated" ClearColor="White"
-                                         Width="16000" Height="16000">
-
-            </canvas:CanvasVirtualControl>
+            <canvas:CanvasVirtualControl x:Name="canvasControl"
+                                         RegionsInvalidated="canvasControl_RegionsInvalidated"
+                                         PointerPressed="canvasControl_PointerPressed"
+                                         PointerReleased="canvasControl_PointerReleased"
+                                         ClearColor="White"
+                                         Width= "16000"
+                                         Height="10000" />
         </ScrollViewer>
+        <TextBlock x:Name="TextHelp" Grid.Row="1" IsHitTestVisible="False"/>
     </Grid>
 </Page>

@@ -23,22 +23,22 @@ namespace SimpleSample
     /// </summary>
     public sealed partial class MainPage : Page
     {
-        private const int countX = 100;
-        private const int countY = 100;
+        private const int countX = 200;
+        private const int countY = 50;
         public MainPage()
         {
-            var listObj = new List<Tuple<int,int,string>>();
-            for(int i = 0;i< countX;i++)
+            var listObj = new List<Tuple<int, int, string>>();
+            for (int i = 0; i < countX; i++)
             {
                 for (int j = 0; j < countY; j++)
                 {
                     listObj.Add(new Tuple<int, int, string>(i, j, $"Object({i},{j})"));
                 }
             }
-            canvasHeight = countY * gridSize;
-            canvasWidth = countX * gridSize;
             Edjes = new ObservableCollection<Tuple<int, int, string>>(listObj);
             this.InitializeComponent();
+            canvasHeight = (int)canvasControl.Height;
+            canvasWidth = (int)canvasControl.Width;
         }
 
         public ObservableCollection<Tuple<int, int, string>> Edjes;
@@ -58,17 +58,11 @@ namespace SimpleSample
             }
         }
         const int gridSize = 70;
-
+        const int Xoffset = 150;
+        const int Yoffset = 150;
         #region resources
-        CanvasTextFormat textFormat = new CanvasTextFormat()
-        {
-            HorizontalAlignment = CanvasHorizontalAlignment.Right,
-            VerticalAlignment = CanvasVerticalAlignment.Bottom,
-            FontFamily = "Comic Sans MS",
-            FontSize = 48
-        };
 
-        CanvasTextFormat coordFormat = new CanvasTextFormat()
+        CanvasTextFormat textFormat = new CanvasTextFormat()
         {
             HorizontalAlignment = CanvasHorizontalAlignment.Center,
             VerticalAlignment = CanvasVerticalAlignment.Center,
@@ -79,7 +73,7 @@ namespace SimpleSample
 
         private CanvasCachedGeometry getCashedValve15(ICanvasResourceCreator resourceCreator)
         {
-            if(cachedGeometry1==null)
+            if (cachedGeometry1 == null)
             {
                 var radius = 15;
                 cachedGeometry1 = CanvasCachedGeometry.CreateFill(CreateValve(resourceCreator, radius));
@@ -123,9 +117,6 @@ namespace SimpleSample
         /// </summary>
         private void DrawRegion(CanvasVirtualControl sender, Rect region)
         {
-            var textt = new CanvasTextLayout(sender,
-                "Everytime drawing text", textFormat, 1000, 0);
-
             using (var ds = sender.CreateDrawingSession(region))
             {
                 ds.Clear(NextColor());
@@ -139,33 +130,34 @@ namespace SimpleSample
                 {
                     for (var y = top; y <= bottom; y += gridSize)
                     {
-                        var curObj = Edjes.FirstOrDefault(xx => xx.Item1 == x/gridSize && xx.Item2 == y / gridSize);
-                        if(curObj!=null)
+                        var curObj = Edjes.FirstOrDefault(xx => xx.Item1 == x / gridSize && xx.Item2 == y / gridSize);
+                        if (curObj != null)
                         {
-                            var pos = new Vector2((float)x + 150, (float)y + 150);
+                            var pos = new Vector2(x + Xoffset, y + Yoffset);
 
                             ds.DrawCachedGeometry(getCashedValve16(sender), pos, Colors.Black);
                             ds.DrawCachedGeometry(getCashedValve15(sender), pos, Colors.LightGray);
-                            ds.DrawText(curObj.Item3, pos, Colors.DarkBlue, coordFormat);
+                            ds.DrawText(curObj.Item3, pos, Colors.DarkBlue, textFormat);
+                            DrawSelectedObject(ds);
                         }
                     }
                 }
             }
         }
 
-        private void DrawTextWithBackground(CanvasDrawingSession ds, CanvasTextLayout layout, double x, double y)
+        private void DrawSelectedObject(CanvasDrawingSession ds, Tuple<int, int, string> obj = null)
         {
-            var backgroundRect = layout.LayoutBounds;
-            backgroundRect.X += x;
-            backgroundRect.Y += y;
-
-            backgroundRect.X -= 20;
-            backgroundRect.Y -= 20;
-            backgroundRect.Width += 40;
-            backgroundRect.Height += 40;
-
-            ds.FillRectangle(backgroundRect, NextColor());
-            ds.DrawTextLayout(layout, (float)x, (float)y, Colors.Black);
+            if (selected != null)
+            {
+                if (obj == null)
+                {
+                    obj = Edjes.FirstOrDefault(xx => xx.Item1 == selected.Item1 && xx.Item2 == selected.Item2);
+                }
+                var pos = new Vector2(obj.Item1 * gridSize + Xoffset, obj.Item2 * gridSize + Yoffset);
+                ds.FillRectangle(new Rect(pos.X, pos.Y, 100, 50),Colors.DarkGray);
+                ds.DrawRectangle(new Rect(pos.X, pos.Y, 100, 50),Colors.LightSlateGray,1f);
+                ds.DrawText(obj.Item3 + "\n#some text#\n#some text#", new Vector2(pos.X+50,pos.Y+ 25), Colors.Black, textFormat);
+            }
         }
 
         static Color[] colors =
@@ -197,6 +189,58 @@ namespace SimpleSample
             // Explicitly remove references to allow the Win2D controls to get garbage collected
             canvasControl.RemoveFromVisualTree();
             canvasControl = null;
+        }
+
+        private Vector2 leftClickPos = new Vector2(int.MaxValue, int.MaxValue);
+        private void canvasControl_PointerPressed(object sender, Windows.UI.Xaml.Input.PointerRoutedEventArgs e)
+        {
+            var pointerPoint = e.GetCurrentPoint(canvasControl);
+            if (pointerPoint.Properties.IsLeftButtonPressed)
+            {
+                leftClickPos = pointerPoint.Position.ToVector2();
+            }
+            SelectionCancel();
+        }
+
+        private Tuple<int, int> selected = null;
+
+        const int owerwriteSize = gridSize;
+
+        private void SelectObject(Vector2 pos)
+        {
+            var x = pos.X - Xoffset - gridSize / 2f;
+            var y = pos.Y - Yoffset - gridSize / 2f;
+            var xi = (int)(x / gridSize) + 1;
+            var yi = (int)(y / gridSize) + 1;
+            var curObj = Edjes.FirstOrDefault(xx => xx.Item1 == xi && xx.Item2 == yi );
+            if (curObj != null)
+            {
+                selected = new Tuple<int, int>(curObj.Item1, curObj.Item2);
+                DrawRegion(canvasControl, new Rect(Math.Max(0,pos.X - owerwriteSize), Math.Max(0,pos.Y - owerwriteSize),
+                    Math.Min(pos.X + owerwriteSize,canvasWidth), Math.Min(pos.Y + owerwriteSize,canvasHeight)));
+            }
+        }
+
+        private void SelectionCancel()
+        {
+            if (selected != null)
+            {
+                var x = selected.Item1 * gridSize + Xoffset;
+                var y = selected.Item2 * gridSize + Yoffset;
+                selected = null;
+                DrawRegion(canvasControl, new Rect(Math.Max(0, x - owerwriteSize), Math.Max(0, y - owerwriteSize),
+                     Math.Min(x + owerwriteSize, canvasWidth), Math.Min(y + owerwriteSize, canvasHeight)));
+            }
+        }
+
+        private void canvasControl_PointerReleased(object sender, Windows.UI.Xaml.Input.PointerRoutedEventArgs e)
+        {
+            var pointerPoint = e.GetCurrentPoint(canvasControl);
+            var pos = pointerPoint.Position.ToVector2();
+            if (leftClickPos == pos)
+            {
+                SelectObject(pos);
+            }
         }
     }
 }
